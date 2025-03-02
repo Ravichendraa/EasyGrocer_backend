@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
+require("dotenv").config({ path: ".env.local" });
 
 //register
 const registerUser = async (req, res) => {
@@ -36,26 +37,31 @@ const registerUser = async (req, res) => {
 };
 
 //login
+ // ✅ Ensure dotenv is loaded
+
 const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const checkUser = await User.findOne({ email });
     if (!checkUser)
-      return res.json({
+      return res.status(400).json({
         success: false,
-        message: "User doesn't exists! Please register first",
+        message: "User doesn't exist! Please register first",
       });
 
-    const checkPasswordMatch = await bcrypt.compare(
-      password,
-      checkUser.password
-    );
+    const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
     if (!checkPasswordMatch)
-      return res.json({
+      return res.status(401).json({
         success: false,
         message: "Incorrect password! Please try again",
       });
+
+    // ✅ Check if JWT_SECRET is defined before signing the token
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ ERROR: JWT_SECRET is not set!");
+      return res.status(500).json({ success: false, message: "Internal server error" });
+    }
 
     const token = jwt.sign(
       {
@@ -64,7 +70,7 @@ const loginUser = async (req, res) => {
         email: checkUser.email,
         userName: checkUser.userName,
       },
-      "CLIENT_SECRET_KEY",
+      process.env.JWT_SECRET, // ✅ Secure secret key from .env
       { expiresIn: "60m" }
     );
 
@@ -77,16 +83,17 @@ const loginUser = async (req, res) => {
         id: checkUser._id,
         userName: checkUser.userName,
       },
+      token, // ✅ Send token in response
     });
+
   } catch (e) {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
-
 //logout
 
 const logoutUser = (req, res) => {
@@ -106,7 +113,7 @@ const authMiddleware = async (req, res, next) => {
     });
 
   try {
-    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = decoded;
     next();
   } catch (error) {

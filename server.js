@@ -1,7 +1,9 @@
+require("dotenv").config({ path: ".env.local" }); // ✅ Ensure dotenv is loaded first
 const express = require("express");
 const mongoose = require("mongoose");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
+
 const authRouter = require("./routes/auth/auth-routes");
 const adminProductsRouter = require("./routes/admin/products-routes");
 const adminOrderRouter = require("./routes/admin/order-routes");
@@ -15,35 +17,33 @@ const shopReviewRouter = require("./routes/shop/review-routes");
 
 const commonFeatureRouter = require("./routes/common/feature-routes");
 
-//create a database connection -> u can also
-//create a separate file for this and then import/use that file here
-require('dotenv').config({ path: '.env.local' });
+// Check if environment variables are loaded
+// if (!process.env.JWT_SECRET) {
+//   console.error(" ERROR: JWT_SECRET is missing in .env.local!");
+//   process.exit(1); // Stop server if critical variable is missing
+// }
+
+// Database Connection
 mongoose
-  // .connect("process.env.MONGODB_URI")
   .connect(process.env.MONGODB_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((error) => console.log(error));
+  .then(() => console.log(" MongoDB connected"))
+  .catch((error) => console.error(" MongoDB connection error:", error));
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 app.use(
   cors({
-    origin: "https://easygrocer.vercel.app",
+    origin: "https://localhost:5173",
     methods: ["GET", "POST", "DELETE", "PUT"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Cache-Control",
-      "Expires",
-      "Pragma",
-    ],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
 app.use(cookieParser());
 app.use(express.json());
+
 app.use("/api/auth", authRouter);
 app.use("/api/admin/products", adminProductsRouter);
 app.use("/api/admin/orders", adminOrderRouter);
@@ -57,4 +57,4 @@ app.use("/api/shop/review", shopReviewRouter);
 
 app.use("/api/common/feature", commonFeatureRouter);
 
-app.listen(PORT, () => console.log(`Server is now running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
